@@ -1,8 +1,11 @@
+#include <algorithm>
 #include <cstdio>
 #include <iostream>
 #include <fstream>
 #include <iterator>
+#include <locale>
 #include <sstream>
+#include <utility>
 #include <vector>
 #include <string>
 #include <map>
@@ -19,11 +22,14 @@ struct Transacao {
   int agencia_destino, conta_destino;
 };
 
-struct movimentacao_consolidada{
+struct movimentacao_consolidada {
   int agencia, conta;
+  double subtotal_dinheiro_vivo = 0.0;
+  double subtotal_transacoes_eletronicas = 0.0;
+  int total_transacoes = 0;
 };
 
-vector<Transacao> ler_transacoesCSV(const string& nome_arquivo) {
+vector<Transacao> ler_transacoesCSV(const string &nome_arquivo) {
   vector<Transacao> transacoes;
   std::ifstream arquivo(nome_arquivo);
   string linha;
@@ -54,4 +60,48 @@ vector<Transacao> ler_transacoesCSV(const string& nome_arquivo) {
 
   arquivo.close();
   return transacoes;
+}
+
+/*função recebe o vetor de transaçoes lidas na função anterior, mes & ano, um map de chaves agencia, conta guarda as movimentações consolidadas
+checka-se se mes e ano de cada transação é o mes e ano passado no parâmetro, crias-se dois pair para 
+chave origem e chave destino, se não acharmos a chave origem no map de consolidados inicia-se uma nova
+movimentação consolidada, se a agencia/conta destino for != 0 a conta teve movimentação digital
+então se inicia uma nova movimentação consolidada depois add a transação para o subtotal de transaçoes 
+eletronicas OU se a agencia conta/destino for = 0 então é só add o valor para subtotal dinheiro vivo
+add total de transações e retorna o map consolidados */
+
+std::map<std::pair<int, int>, movimentacao_consolidada> consolidarTrransacoes(const vector<Transacao>& transacoes, int mes, int ano){
+  std::map<std::pair<int, int>, movimentacao_consolidada> consolidados;
+
+  for ( const auto& transacao : transacoes) {
+    if (transacao.mes == mes && transacao.ano == ano) {
+      std::pair<int, int> chave_origem(transacao.agencia_origem, transacao.conta_origem);
+      std::pair<int, int> chave_destino(transacao.agencia_destino, transacao.conta_destino);
+      
+
+      if (consolidados.find(chave_origem) == consolidados.end()) {
+         consolidados[chave_origem] = movimentacao_consolidada{
+          transacao.agencia_origem,
+          transacao.conta_origem,
+          0.0, 0.0, 0
+         }; 
+      }
+
+      
+      if (transacao.agencia_destino != 0 || transacao.conta_destino != 0) {
+        if (consolidados.find(chave_destino) == consolidados.end()) {
+          consolidados[chave_destino] = movimentacao_consolidada{
+            transacao.agencia_destino,
+            transacao.conta_destino,
+            0.0, 0.0, 0
+          };
+        }
+        consolidados[chave_destino].subtotal_transacoes_eletronicas += transacao.valor;
+      }else {
+        consolidados[chave_origem].subtotal_dinheiro_vivo += transacao.valor;
+      }
+      consolidados[chave_origem].total_transacoes++;
+    }
+  }
+  return consolidados;
 }
