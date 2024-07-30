@@ -105,3 +105,4 @@ std::map<std::pair<int, int>, movimentacao_consolidada> consolidarTrransacoes(co
   }
   return consolidados;
 }
+/*add comentary*/
