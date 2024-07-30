@@ -6,7 +6,7 @@
 #include <locale>
 #include <sstream>
 #include <utility>
-#include <vector>
+#include <vector> 
 #include <string>
 #include <map>
 #include <ctime>
@@ -70,7 +70,7 @@ então se inicia uma nova movimentação consolidada depois add a transação pa
 eletronicas OU se a agencia conta/destino for = 0 então é só add o valor para subtotal dinheiro vivo
 add total de transações e retorna o map consolidados */
 
-std::map<std::pair<int, int>, movimentacao_consolidada> consolidarTrransacoes(const vector<Transacao>& transacoes, int mes, int ano){
+std::map<std::pair<int, int>, movimentacao_consolidada> consolidarTransacoes(const vector<Transacao>& transacoes, int mes, int ano){
   std::map<std::pair<int, int>, movimentacao_consolidada> consolidados;
 
   for ( const auto& transacao : transacoes) {
@@ -78,8 +78,7 @@ std::map<std::pair<int, int>, movimentacao_consolidada> consolidarTrransacoes(co
       std::pair<int, int> chave_origem(transacao.agencia_origem, transacao.conta_origem);
       std::pair<int, int> chave_destino(transacao.agencia_destino, transacao.conta_destino);
       
-
-      if (consolidados.find(chave_origem) == consolidados.end()) {
+ if (consolidados.find(chave_origem) == consolidados.end()) {
          consolidados[chave_origem] = movimentacao_consolidada{
           transacao.agencia_origem,
           transacao.conta_origem,
@@ -105,4 +104,39 @@ std::map<std::pair<int, int>, movimentacao_consolidada> consolidarTrransacoes(co
   }
   return consolidados;
 }
-/*add comentary*/
+
+void salvarConsolidadoBinario(const string& nome_arquivo, const std::map<std::pair<int, int>, movimentacao_consolidada>& consolidados){
+  std::ofstream arquivo(nome_arquivo, std::ios::binary);
+  if(!arquivo.is_open()){
+    std::cerr << "Erro ao abrir o arquivo binário para escrita." << std::endl;
+    return;
+  }
+
+  for(const auto& [chave, consolidado] : consolidados){
+    arquivo.write(reinterpret_cast<const char*>(&consolidado), sizeof(movimentacao_consolidada));
+  }
+  arquivo.close();
+}
+
+std::map<std::pair<int, int>, movimentacao_consolidada> carregarConsolidadoBinario(const string& nome_arquivo){
+  std::map<std::pair<int, int>, movimentacao_consolidada> consolidados;
+  std::ifstream arquivo(nome_arquivo, std::ios::binary);
+
+  if(!arquivo.is_open()){
+    std::cerr << "Erro ao abrir o arquivo binário para carregar." << std::endl;
+    return consolidados;
+  }
+  movimentacao_consolidada consolidado;
+  while(arquivo.read(reinterpret_cast<char*>(&consolidado), sizeof(movimentacao_consolidada))){
+    std::pair<int, int> chave  = {consolidado.agencia, consolidado.conta};
+    consolidados[chave] = consolidado;
+  }
+
+  arquivo.close();
+  return consolidados;
+}
+
+
+
+
+
