@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iterator>
 #include <locale>
+#include <ostream>
 #include <sstream>
 #include <utility>
 #include <vector> 
@@ -52,9 +53,8 @@ vector<Transacao> ler_transacoesCSV(const string &nome_arquivo) {
     getline(ss, campo, ','); transacao.conta_origem = std::stoi(campo);
     getline(ss, campo, ','); transacao.valor = std::stod(campo);
     getline(ss, campo, ','); transacao.agencia_destino = campo.empty() ? 0 : std::stoi(campo);
-    cout << campo << std::endl;
-    getline(ss, campo, ','); transacao.conta_destino = campo.empty() ? 0 : std::stoi(campo);
-    
+    getline(ss, campo, ','); transacao.conta_destino = campo.length() <= 1 ? 0 : stoi(campo);
+
     transacoes.push_back(transacao);
   }
 
@@ -78,29 +78,29 @@ std::map<std::pair<int, int>, movimentacao_consolidada> consolidarTransacoes(con
       std::pair<int, int> chave_origem(transacao.agencia_origem, transacao.conta_origem);
       std::pair<int, int> chave_destino(transacao.agencia_destino, transacao.conta_destino);
       
- if (consolidados.find(chave_origem) == consolidados.end()) {
-         consolidados[chave_origem] = movimentacao_consolidada{
-          transacao.agencia_origem,
-          transacao.conta_origem,
-          0.0, 0.0, 0
-         }; 
-      }
+     if (consolidados.find(chave_origem) == consolidados.end()) {
+             consolidados[chave_origem] = movimentacao_consolidada{
+              transacao.agencia_origem,
+              transacao.conta_origem,
+              0.0, 0.0, 0
+             }; 
+          }
 
-      
-      if (transacao.agencia_destino != 0 || transacao.conta_destino != 0) {
-        if (consolidados.find(chave_destino) == consolidados.end()) {
-          consolidados[chave_destino] = movimentacao_consolidada{
-            transacao.agencia_destino,
-            transacao.conta_destino,
-            0.0, 0.0, 0
-          };
-        }
-        consolidados[chave_destino].subtotal_transacoes_eletronicas += transacao.valor;
-      }else {
-        consolidados[chave_origem].subtotal_dinheiro_vivo += transacao.valor;
+          
+    if (transacao.agencia_destino != 0 || transacao.conta_destino != 0) {
+      if (consolidados.find(chave_destino) == consolidados.end()) {
+        consolidados[chave_destino] = movimentacao_consolidada{
+          transacao.agencia_destino,
+          transacao.conta_destino,
+          0.0, 0.0, 0
+        };
       }
-      consolidados[chave_origem].total_transacoes++;
+      consolidados[chave_destino].subtotal_transacoes_eletronicas += transacao.valor;
+    }else {
+      consolidados[chave_origem].subtotal_dinheiro_vivo += transacao.valor;
     }
+    consolidados[chave_origem].total_transacoes++;
+  }
   }
   return consolidados;
 }
@@ -137,8 +137,36 @@ std::map<std::pair<int, int>, movimentacao_consolidada> carregarConsolidadoBinar
 }
 
 
+void registrarLog(const string& mensagem){
+  std::ofstream log("log.txt" std::ios::app);
+  
+  if (!log.is_open()) {
+      std::cerr << "Erro ao abrir o arquivo de log" << std::endl;
+      return;
+  }
+
+  std::time_t agora = std::time(nullptr);
+  log << std::ctime(&agora) << mensagem << std::endl;
+  log.close();
+}
+
+void consultarMovimentação(int mes, int ano){
+  string nome_arquivo_bin = "consolidadas" + std::to_string(mes) +std::to_string(ano) + ".bin";
+  std::map<string, ,movimentacao_consolidada> consolidados;
+
+  std::ifstream arquivo_bin(nome_arquivo_bin);
+  if (arquivo_bin.is_open()) {
+    arquivo_bin.close();
+    consolidados = carregarConsolidadoBinario(nome_arquivo_bin);
+  }else {
+    std::vector<Transacao> transacoes = ler_transacoesCSV("trancoes.csv");
+  }
+}
+
 int main(){
-  ler_transacoesCSV("transacoes.csv");
+  vector<Transacao> t = ler_transacoesCSV("transacoes.csv");
+
+  std::map<std::pair<int, int>, movimentacao_consolidada> consolida_2005 = consolidarTransacoes(t, 6, 2005);
 }
 
 
