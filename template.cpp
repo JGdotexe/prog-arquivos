@@ -11,6 +11,7 @@
 #include <map>
 #include <ctime>
 
+
 using std::cout;
 using std::vector;
 using std::string;
@@ -49,11 +50,10 @@ vector<Transacao> ler_transacoesCSV(const string &nome_arquivo) {
     getline(ss, campo, ','); transacao.ano = std::stoi(campo);
     getline(ss, campo, ','); transacao.agencia_origem = std::stoi(campo);
     getline(ss, campo, ','); transacao.conta_origem = std::stoi(campo);
-    getline(ss, campo, ','); transacao.valor = std::stoi(campo);
-    getline(ss, campo, ',');   
-    transacao.agencia_destino = campo.empty() ? 0 : std::stoi(campo);
-    getline(ss, campo, ',');
-    transacao.conta_destino = campo.empty() ? 0 : std::stoi(campo);
+    getline(ss, campo, ','); transacao.valor = std::stod(campo);
+    getline(ss, campo, ','); transacao.agencia_destino = campo.empty() ? 0 : std::stoi(campo);
+    cout << campo << std::endl;
+    getline(ss, campo, ','); transacao.conta_destino = campo.empty() ? 0 : std::stoi(campo);
     
     transacoes.push_back(transacao);
   }
@@ -137,6 +137,8 @@ std::map<std::pair<int, int>, movimentacao_consolidada> carregarConsolidadoBinar
 }
 
 
-
+int main(){
+  ler_transacoesCSV("transacoes.csv");
+}
 
 
