@@ -16,6 +16,7 @@
 using std::cout;
 using std::vector;
 using std::string;
+using std::endl;
 
 struct Transacao {
   int dia, mes, ano;
@@ -37,7 +38,7 @@ vector<Transacao> ler_transacoesCSV(const string &nome_arquivo) {
   string linha;
 
   if (!arquivo.is_open()) {
-    std::cerr << "Erro ao abrir o arquivo CSV" << std::endl;
+    std::cerr << "Erro ao abrir o arquivo CSV" << endl;
     return transacoes;
   }
 
@@ -108,7 +109,7 @@ std::map<std::pair<int, int>, movimentacao_consolidada> consolidarTransacoes(con
 void salvarConsolidadoBinario(const string& nome_arquivo, const std::map<std::pair<int, int>, movimentacao_consolidada>& consolidados){
   std::ofstream arquivo(nome_arquivo, std::ios::binary);
   if(!arquivo.is_open()){
-    std::cerr << "Erro ao abrir o arquivo binário para escrita." << std::endl;
+    std::cerr << "Erro ao abrir o arquivo binário para escrita." << endl;
     return;
   }
 
@@ -123,7 +124,7 @@ std::map<std::pair<int, int>, movimentacao_consolidada> carregarConsolidadoBinar
   std::ifstream arquivo(nome_arquivo, std::ios::binary);
 
   if(!arquivo.is_open()){
-    std::cerr << "Erro ao abrir o arquivo binário para carregar." << std::endl;
+    std::cerr << "Erro ao abrir o arquivo binário para carregar." << endl;
     return consolidados;
   }
   movimentacao_consolidada consolidado;
@@ -138,21 +139,21 @@ std::map<std::pair<int, int>, movimentacao_consolidada> carregarConsolidadoBinar
 
 
 void registrarLog(const string& mensagem){
-  std::ofstream log("log.txt" std::ios::app);
+  std::ofstream log("log.txt" ,std::ios::app);
   
   if (!log.is_open()) {
-      std::cerr << "Erro ao abrir o arquivo de log" << std::endl;
+      std::cerr << "Erro ao abrir o arquivo de log" << endl;
       return;
   }
 
   std::time_t agora = std::time(nullptr);
-  log << std::ctime(&agora) << mensagem << std::endl;
+  log << std::ctime(&agora) << mensagem << endl;
   log.close();
 }
 
 void consultarMovimentação(int mes, int ano){
   string nome_arquivo_bin = "consolidadas" + std::to_string(mes) +std::to_string(ano) + ".bin";
-  std::map<string, ,movimentacao_consolidada> consolidados;
+  std::map<std::pair<int, int>, movimentacao_consolidada> consolidados;
 
   std::ifstream arquivo_bin(nome_arquivo_bin);
   if (arquivo_bin.is_open()) {
@@ -160,6 +161,16 @@ void consultarMovimentação(int mes, int ano){
     consolidados = carregarConsolidadoBinario(nome_arquivo_bin);
   }else {
     std::vector<Transacao> transacoes = ler_transacoesCSV("trancoes.csv");
+    consolidados = consolidarTransacoes(transacoes, mes, ano);
+    salvarConsolidadoBinario(nome_arquivo_bin, consolidados);
+    registrarLog("Movimetação consolidada calculada para" + std::to_string(mes) + "/" + std::to_string(ano));
+  }
+
+  for (const auto& [chave, consolidado] : consolidados) {
+    cout << "Agênci: " << consolidado.agencia << ", Conta: " << consolidado.conta << endl;
+    cout << "Subtotal Dinheiro Vivo: " <<  consolidado.subtotal_dinheiro_vivo << endl;
+    cout << "Subtotal Transações Eletronicas" << consolidado.subtotal_transacoes_eletronicas << std::endl;
+    cout << "Total Transações: " << consolidado.total_transacoes << endl;
   }
 }
 
