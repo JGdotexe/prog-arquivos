@@ -12,7 +12,6 @@
 #include <map>
 #include <ctime>
 
-
 using std::cout;
 using std::vector;
 using std::string;
@@ -75,33 +74,32 @@ std::map<std::pair<int, int>, movimentacao_consolidada> consolidarTransacoes(con
   std::map<std::pair<int, int>, movimentacao_consolidada> consolidados;
 
   for ( const auto& transacao : transacoes) {
-    if (transacao.mes == mes && transacao.ano == ano) {
-      std::pair<int, int> chave_origem(transacao.agencia_origem, transacao.conta_origem);
-      std::pair<int, int> chave_destino(transacao.agencia_destino, transacao.conta_destino);
-      
-     if (consolidados.find(chave_origem) == consolidados.end()) {
-             consolidados[chave_origem] = movimentacao_consolidada{
+      if (transacao.mes == mes && transacao.ano == ano) {
+          std::pair<int, int> chave_origem(transacao.agencia_origem, transacao.conta_origem);
+          std::pair<int, int> chave_destino(transacao.agencia_destino, transacao.conta_destino);
+           
+           if (consolidados.find(chave_origem) == consolidados.end()) {
+              consolidados[chave_origem] = movimentacao_consolidada{
               transacao.agencia_origem,
               transacao.conta_origem,
               0.0, 0.0, 0
-             }; 
+              }; 
+           }
+                  
+          if (transacao.agencia_destino != 0 || transacao.conta_destino != 0) {
+            if (consolidados.find(chave_destino) == consolidados.end()) {
+              consolidados[chave_destino] = movimentacao_consolidada{
+                transacao.agencia_destino,
+                transacao.conta_destino,
+                0.0, 0.0, 0
+              };
+            }
+            consolidados[chave_destino].subtotal_transacoes_eletronicas += transacao.valor;
+          }else {
+            consolidados[chave_origem].subtotal_dinheiro_vivo += transacao.valor;
           }
-
-          
-    if (transacao.agencia_destino != 0 || transacao.conta_destino != 0) {
-      if (consolidados.find(chave_destino) == consolidados.end()) {
-        consolidados[chave_destino] = movimentacao_consolidada{
-          transacao.agencia_destino,
-          transacao.conta_destino,
-          0.0, 0.0, 0
-        };
+        consolidados[chave_origem].total_transacoes++;
       }
-      consolidados[chave_destino].subtotal_transacoes_eletronicas += transacao.valor;
-    }else {
-      consolidados[chave_origem].subtotal_dinheiro_vivo += transacao.valor;
-    }
-    consolidados[chave_origem].total_transacoes++;
-  }
   }
   return consolidados;
 }
@@ -146,13 +144,8 @@ void atualizarLog(const std::string& mensagem) {
     }
 }
 
-string name_bin(int mes, int ano) {
-  string nome_arquivo_bin = "consolidadas" + std::to_string(mes) + "/" + std::to_string(ano) +".bin";
-  return nome_arquivo_bin;
-}
-
 void consultarMovimentação(int mes, int ano){
-  string nome_arquivo_bin = name_bin(mes, ano);
+  string nome_arquivo_bin = "consolidadas" + std::to_string(mes) + std::to_string(ano) +".bin";
   std::map<std::pair<int, int>, movimentacao_consolidada> consolidados;
 
   std::ifstream arquivo_bin(nome_arquivo_bin);
@@ -160,7 +153,7 @@ void consultarMovimentação(int mes, int ano){
     arquivo_bin.close();
     consolidados = carregarConsolidadoBinario(nome_arquivo_bin);
   }else {
-    std::vector<Transacao> transacoes = ler_transacoesCSV("trancoes.csv");
+    std::vector<Transacao> transacoes = ler_transacoesCSV("transacoes.csv");
     consolidados = consolidarTransacoes(transacoes, mes, ano);
     salvarConsolidadoBinario(nome_arquivo_bin, consolidados);
     atualizarLog("Movimetação consolidada calculada para" + std::to_string(mes) + "/" + std::to_string(ano));
@@ -174,61 +167,70 @@ void consultarMovimentação(int mes, int ano){
   }
 }
 
-// Nova função de filtragem baseada na função de carregamento
-void filtrarMovimentacao(int mes, int ano, double x, double y, bool tipoE) {
-    std::string nome_arquivo_bin = "consolidadas" + std::to_string(mes) + std::to_string(ano) + ".bin";
-    std::map<std::pair<int, int>, movimentacao_consolidada> consolidados;
+// // Nova função de filtragem baseada na função de carregamento
+// void filtrarMovimentacao(int mes, int ano, double x, double y, bool tipoE) {
+    // std::string nome_arquivo_bin = "consolidadas" + std::to_string(mes) + std::to_string(ano) + ".bin";
+//     std::map<std::pair<int, int>, movimentacao_consolidada> consolidados;
 
-    // Verifica se o arquivo binário já existe
-    std::ifstream arquivo_bin(nome_arquivo_bin, std::ios::binary);
-    if (arquivo_bin.is_open()) {
-        arquivo_bin.close();
-        consolidados = carregarConsolidadoBinario(nome_arquivo_bin);
-    } else {
-        std::vector<Transacao> transacoes = ler_transacoesCSV("transacoes.csv");
-        consolidados = consolidarTransacoes(transacoes, mes, ano);
-        salvarConsolidadoBinario(nome_arquivo_bin, consolidados);
-        atualizarLog("Movimentação consolidada calculada para " + std::to_string(mes) + "/" + std::to_string(ano));
-    }
+//     // Verifica se o arquivo binário já existe
+//     std::ifstream arquivo_bin(nome_arquivo_bin, std::ios::binary);
+//     if (arquivo_bin.is_open()) {
+//         arquivo_bin.close();
+//         consolidados = carregarConsolidadoBinario(nome_arquivo_bin);
+//     } else {
+//         std::vector<Transacao> transacoes = ler_transacoesCSV("transacoes.csv");
+//         consolidados = consolidarTransacoes(transacoes, mes, ano);
+//         salvarConsolidadoBinario(nome_arquivo_bin, consolidados);
+//         atualizarLog("Movimentação consolidada calculada para " + std::to_string(mes) + "/" + std::to_string(ano));
+//     }
 
-    // Filtragem
-    std::vector< movimentacao_consolidada> resultado_filtrado;
-    for (const auto& [chave, consolidado] : consolidados) {
-        if (tipoE) {
-            if (consolidado.subtotal_dinheiro_vivo >= x && consolidado.subtotal_transacoes_eletronicas >= y) {
-                resultado_filtrado.push_back(consolidado);
-            }
-        } else {
-            if (consolidado.subtotal_dinheiro_vivo >= x || consolidado.subtotal_transacoes_eletronicas >= y) {
-                resultado_filtrado.push_back(consolidado);
-            }
-        }
-    }
+//     // Filtragem
+//     std::vector< movimentacao_consolidada> resultado_filtrado;
+//     for (const auto& [chave, consolidado] : consolidados) {
+//         if (tipoE) {
+//             if (consolidado.subtotal_dinheiro_vivo >= x && consolidado.subtotal_transacoes_eletronicas >= y) {
+//                 resultado_filtrado.push_back(consolidado);
+//             }
+//         } else {
+//             if (consolidado.subtotal_dinheiro_vivo >= x || consolidado.subtotal_transacoes_eletronicas >= y) {
+//                 resultado_filtrado.push_back(consolidado);
+//             }
+//         }
+//     }
 
-    // Mostra o resultado da filtragem
-    for (const auto& consolidado : resultado_filtrado) {
-        std::cout << "Agencia: " << consolidado.agencia
-                  << ", Conta: " << consolidado.conta
-                  << ", Subtotal Dinheiro Vivo: " << consolidado.subtotal_dinheiro_vivo
-                  << ", Subtotal Transacoes Eletronicas: " << consolidado.subtotal_transacoes_eletronicas
-                  << ", Total Transacoes: " << consolidado.total_transacoes << std::endl;
-    }
+//     // Mostra o resultado da filtragem
+//     for (const auto& consolidado : resultado_filtrado) {
+//         std::cout << "Agencia: " << consolidado.agencia
+//                   << ", Conta: " << consolidado.conta
+//                   << ", Subtotal Dinheiro Vivo: " << consolidado.subtotal_dinheiro_vivo
+//                   << ", Subtotal Transacoes Eletronicas: " << consolidado.subtotal_transacoes_eletronicas
+//                   << ", Total Transacoes: " << consolidado.total_transacoes << std::endl;
+//     }
 
-    // Registrar log
-    std::ofstream log("log.txt", std::ios::app);
-    if (log.is_open()) {
-        log << "Filtragem realizada em " << mes << "/" << ano
-            << " com X=" << x << ", Y=" << y << ", Tipo=" << (tipoE ? "E" : "OU")
-            << ". Registros mostrados: " << resultado_filtrado.size()
-            << " em " << __DATE__ << " " << __TIME__ << std::endl;
-        log.close();
-    }
-}
+//     // Registrar log
+//     std::ofstream log("log.txt", std::ios::app);
+//     if (log.is_open()) {
+//         log << "Filtragem realizada em " << mes << "/" << ano
+//             << " com X=" << x << ", Y=" << y << ", Tipo=" << (tipoE ? "E" : "OU")
+//             << ". Registros mostrados: " << resultado_filtrado.size()
+//             << " em " << __DATE__ << " " << __TIME__ << std::endl;
+//         log.close();
+//     }
+// }
+
+// void filtrarMovimentacao(int mes, int ano, double x, double y, const string& tipoFiltro){
+//     string nome_arquivo_bin = "consolidadas" + (mes < 10? "0" : "") + std::to_string(mes) + std::to_string(ano) + ".bin";
+// }
 
 int main(){
   vector<Transacao> t = ler_transacoesCSV("transacoes.csv");
-
-  std::map<std::pair<int, int>, movimentacao_consolidada> consolida_2005 = consolidarTransacoes(t, 6, 2005);
+  consultarMovimentação(11, 2014);
+  // std::map<std::pair<int,int>, movimentacao_consolidada> consolidados_fev_2005 = consolidarTransacoes(t, 11, 2014);
+    
+  // for(auto it: consolidados_fev_2005){
+  //   movimentacao_consolidada p = it.second;
+  //   cout << p.agencia << " " << p.conta << " " << p.total_transacoes << " " << p.subtotal_dinheiro_vivo << " " << p.subtotal_transacoes_eletronicas << endl;
+  // }
 }
 
 
