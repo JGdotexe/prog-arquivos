@@ -1,3 +1,4 @@
+#include <iomanip>
 #include <algorithm>
 #include <cstdio>
 #include <iostream>
@@ -159,12 +160,20 @@ void consultarMovimentação(int mes, int ano){
     atualizarLog("Movimetação consolidada calculada para" + std::to_string(mes) + "/" + std::to_string(ano));
   }
 
-  for (const auto& [chave, consolidado] : consolidados) {
-    cout << "Agênci: " << consolidado.agencia << ", Conta: " << consolidado.conta << endl;
-    cout << "Subtotal Dinheiro Vivo: " <<  consolidado.subtotal_dinheiro_vivo << endl;
-    cout << "Subtotal Transações Eletronicas" << consolidado.subtotal_transacoes_eletronicas << std::endl;
-    cout << "Total Transações: " << consolidado.total_transacoes << endl;
-  }
+  std::cout << std::left << std::setw(10) << "Agência"
+              << std::setw(10) << "Conta"
+              << std::setw(20) << "Dinheiro Vivo"
+              << std::setw(20) << "Transações Eletrônicas"
+              << std::setw(20) << "Total Transações"
+              << std::endl;
+
+    for (const auto& [chave, consolidado] : consolidados) {
+        std::cout << std::left << std::setw(10) << consolidado.agencia
+                  << std::setw(10) << consolidado.conta
+                  << std::setw(20) << consolidado.subtotal_dinheiro_vivo
+                  << std::setw(20) << consolidado.subtotal_transacoes_eletronicas
+                  << std::setw(20) << consolidado.total_transacoes
+                  << std::endl;
 }
 
 // // Nova função de filtragem baseada na função de carregamento
@@ -222,7 +231,7 @@ void consultarMovimentação(int mes, int ano){
 //     string nome_arquivo_bin = "consolidadas" + (mes < 10? "0" : "") + std::to_string(mes) + std::to_string(ano) + ".bin";
 // }
 
-int main(){
+int main() {
   vector<Transacao> t = ler_transacoesCSV("transacoes.csv");
   consultarMovimentação(11, 2014);
   // std::map<std::pair<int,int>, movimentacao_consolidada> consolidados_fev_2005 = consolidarTransacoes(t, 11, 2014);
@@ -232,5 +241,3 @@ int main(){
   //   cout << p.agencia << " " << p.conta << " " << p.total_transacoes << " " << p.subtotal_dinheiro_vivo << " " << p.subtotal_transacoes_eletronicas << endl;
   // }
 }
-
-
