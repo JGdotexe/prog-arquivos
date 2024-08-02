@@ -137,22 +137,22 @@ std::map<std::pair<int, int>, movimentacao_consolidada> carregarConsolidadoBinar
   return consolidados;
 }
 
+// Função para registrar logs
+void atualizarLog(const std::string& mensagem) {
+    std::ofstream log("log.txt", std::ios::app);
+    if (log.is_open()) {
+        log << mensagem << " em " << __DATE__ << " " << __TIME__ << std::endl;
+        log.close();
+    }
+}
 
-void registrarLog(const string& mensagem){
-  std::ofstream log("log.txt" ,std::ios::app);
-  
-  if (!log.is_open()) {
-      std::cerr << "Erro ao abrir o arquivo de log" << endl;
-      return;
-  }
-
-  std::time_t agora = std::time(nullptr);
-  log << std::ctime(&agora) << mensagem << endl;
-  log.close();
+string name_bin(int mes, int ano) {
+  string nome_arquivo_bin = "consolidadas" + std::to_string(mes) + "/" + std::to_string(ano) +".bin";
+  return nome_arquivo_bin;
 }
 
 void consultarMovimentação(int mes, int ano){
-  string nome_arquivo_bin = "consolidadas" + std::to_string(mes) +std::to_string(ano) + ".bin";
+  string nome_arquivo_bin = name_bin(mes, ano);
   std::map<std::pair<int, int>, movimentacao_consolidada> consolidados;
 
   std::ifstream arquivo_bin(nome_arquivo_bin);
@@ -163,7 +163,7 @@ void consultarMovimentação(int mes, int ano){
     std::vector<Transacao> transacoes = ler_transacoesCSV("trancoes.csv");
     consolidados = consolidarTransacoes(transacoes, mes, ano);
     salvarConsolidadoBinario(nome_arquivo_bin, consolidados);
-    registrarLog("Movimetação consolidada calculada para" + std::to_string(mes) + "/" + std::to_string(ano));
+    atualizarLog("Movimetação consolidada calculada para" + std::to_string(mes) + "/" + std::to_string(ano));
   }
 
   for (const auto& [chave, consolidado] : consolidados) {
@@ -172,6 +172,57 @@ void consultarMovimentação(int mes, int ano){
     cout << "Subtotal Transações Eletronicas" << consolidado.subtotal_transacoes_eletronicas << std::endl;
     cout << "Total Transações: " << consolidado.total_transacoes << endl;
   }
+}
+
+// Nova função de filtragem baseada na função de carregamento
+void filtrarMovimentacao(int mes, int ano, double x, double y, bool tipoE) {
+    std::string nome_arquivo_bin = "consolidadas" + std::to_string(mes) + std::to_string(ano) + ".bin";
+    std::map<std::pair<int, int>, movimentacao_consolidada> consolidados;
+
+    // Verifica se o arquivo binário já existe
+    std::ifstream arquivo_bin(nome_arquivo_bin, std::ios::binary);
+    if (arquivo_bin.is_open()) {
+        arquivo_bin.close();
+        consolidados = carregarConsolidadoBinario(nome_arquivo_bin);
+    } else {
+        std::vector<Transacao> transacoes = ler_transacoesCSV("transacoes.csv");
+        consolidados = consolidarTransacoes(transacoes, mes, ano);
+        salvarConsolidadoBinario(nome_arquivo_bin, consolidados);
+        atualizarLog("Movimentação consolidada calculada para " + std::to_string(mes) + "/" + std::to_string(ano));
+    }
+
+    // Filtragem
+    std::vector< movimentacao_consolidada> resultado_filtrado;
+    for (const auto& [chave, consolidado] : consolidados) {
+        if (tipoE) {
+            if (consolidado.subtotal_dinheiro_vivo >= x && consolidado.subtotal_transacoes_eletronicas >= y) {
+                resultado_filtrado.push_back(consolidado);
+            }
+        } else {
+            if (consolidado.subtotal_dinheiro_vivo >= x || consolidado.subtotal_transacoes_eletronicas >= y) {
+                resultado_filtrado.push_back(consolidado);
+            }
+        }
+    }
+
+    // Mostra o resultado da filtragem
+    for (const auto& consolidado : resultado_filtrado) {
+        std::cout << "Agencia: " << consolidado.agencia
+                  << ", Conta: " << consolidado.conta
+                  << ", Subtotal Dinheiro Vivo: " << consolidado.subtotal_dinheiro_vivo
+                  << ", Subtotal Transacoes Eletronicas: " << consolidado.subtotal_transacoes_eletronicas
+                  << ", Total Transacoes: " << consolidado.total_transacoes << std::endl;
+    }
+
+    // Registrar log
+    std::ofstream log("log.txt", std::ios::app);
+    if (log.is_open()) {
+        log << "Filtragem realizada em " << mes << "/" << ano
+            << " com X=" << x << ", Y=" << y << ", Tipo=" << (tipoE ? "E" : "OU")
+            << ". Registros mostrados: " << resultado_filtrado.size()
+            << " em " << __DATE__ << " " << __TIME__ << std::endl;
+        log.close();
+    }
 }
 
 int main(){
